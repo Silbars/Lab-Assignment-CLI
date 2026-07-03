@@ -1,0 +1,1 @@
+ls: /nonexistent_path_xyz: No such file or directory

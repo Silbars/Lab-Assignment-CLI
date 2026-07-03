@@ -1,0 +1,98 @@
+====================================================================
+Question 1 - Linux Environment Verification
+====================================================================
+
+--------------------------------------------------------------------
+1. Username and groups associated with your account
+--------------------------------------------------------------------
+Command:
+$ whoami
+$ id
+$ groups
+
+Output:
+silbars
+uid=501(silbars) gid=20(staff) groups=20(staff),12(everyone),61(localaccounts),79(_appserverusr),80(admin),81(_appserveradm),701(com.apple.sharepoint.group.1),33(_appstore),98(_lpadmin),100(_lpoperator),204(_developer),250(_analyticsusers),395(com.apple.access_ftp),398(com.apple.access_screensharing),399(com.apple.access_ssh),400(com.apple.access_remote_ae)
+staff everyone localaccounts _appserverusr admin _appserveradm com.apple.sharepoint.group.1 _appstore _lpadmin _lpoperator _developer _analyticsusers com.apple.access_ftp com.apple.access_screensharing com.apple.access_ssh com.apple.access_remote_ae
+
+Explanation:
+`whoami` prints only the effective username of the current session,
+while `id` gives the full identity picture - numeric user ID (UID),
+group ID (GID), and every supplementary group the account belongs
+to. `groups` lists just the group names. This confirms exactly who
+I am logged in as and what group-level permissions I will inherit
+when accessing files.
+
+--------------------------------------------------------------------
+2. Current shell being used
+--------------------------------------------------------------------
+Command:
+$ echo $SHELL
+$ ps -p $$ -o comm=
+
+Output:
+/bin/zsh
+-zsh
+
+Explanation:
+$SHELL is an environment variable set at login pointing to the
+default login shell (zsh here), while `ps -p $$` looks up the
+process actually running in this session using the shell's own PID
+($$). Both agree that zsh is the active shell, which matters
+because scripting syntax (e.g. brace expansion, arrays) differs
+between shells like sh, zsh, and zsh.
+
+--------------------------------------------------------------------
+3. Current working directory
+--------------------------------------------------------------------
+Command:
+$ pwd
+
+Output:
+/Users/silbars/Desktop/lab/Q1_Linux_Environment_Verification
+
+Explanation:
+`pwd` (print working directory) prints the absolute path of the
+directory the shell is currently positioned in. Knowing this avoids
+accidentally creating or deleting files in the wrong location.
+
+--------------------------------------------------------------------
+4. List of files and directories in your workspace
+--------------------------------------------------------------------
+Command:
+$ ls -la 
+
+Output:
+total 16
+drwxr-xr-x@ 3 silbars  staff    96  3 Jul 22:16 .
+drwxr-xr-x@ 9 silbars  staff   288  3 Jul 22:17 ..
+-rw-r--r--@ 1 silbars  staff  4652  3 Jul 22:32 Environment_Report.txt
+
+Explanation:
+`ls -la` lists ALL entries (including hidden dotfiles, via -a) in
+long format (-l), which shows permissions, owner, group, size, and
+modification time for each file/directory. This is the standard
+first command to run to understand a directory's contents.
+
+--------------------------------------------------------------------
+5. Network connectivity verification result
+--------------------------------------------------------------------
+Command:
+$ curl -s -o /dev/null -w "HTTP_STATUS:%{http_code}\n" https://www.google.com
+$ getent hosts google.com
+
+Output:
+HTTP_STATUS:200
+2607:f8b0:4001:c6a::8b google.com
+(additional IPv6 records omitted)
+
+Explanation:
+Since ICMP (ping) is blocked in many restricted/cloud environments,
+I verified connectivity two ways instead: `curl -w "%{http_code}"`
+confirms the machine can complete a TLS handshake and receive an
+HTTP response from an external server (any response code, even 200d,
+proves the network path and DNS both work), and `getent hosts`
+confirms that DNS resolution itself is functioning correctly.
+
+====================================================================
+====================================================================

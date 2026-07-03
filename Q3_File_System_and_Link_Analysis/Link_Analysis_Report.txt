@@ -1,0 +1,112 @@
+====================================================================
+Question 3 - File System and Link Analysis
+====================================================================
+
+Setup commands:
+$ echo "Original file content - do not lose me" > original.txt
+$ ln original.txt hardlink.txt
+$ ln -s original.txt symlink.txt
+
+Explanation:
+`ln original.txt hardlink.txt` (no -s flag) creates a HARD link -
+a second directory entry pointing at the exact same inode as
+original.txt. `ln -s original.txt symlink.txt` creates a SYMBOLIC
+(soft) link - a new, separate inode whose only content is the
+literal text path "original.txt" that the kernel follows at access
+time.
+
+--------------------------------------------------------------------
+1. Inode numbers of all files
+--------------------------------------------------------------------
+Command:
+$ ls -li
+
+Output:
+total 32
+32918970 -rw-r--r--@ 2 silbars  staff    39  3 Jul 22:51 hardlink.txt
+32908898 -rw-r--r--@ 1 silbars  staff  5061  3 Jul 22:52 Link_Analysis_Report.txt
+32918970 -rw-r--r--@ 2 silbars  staff    39  3 Jul 22:51 original.txt
+32919685 lrwxr-xr-x@ 1 silbars  staff    12  3 Jul 22:56 symlink.txt -> original.txt
+
+Explanation:
+original.txt and hardlink.txt share the SAME inode number (39)
+- proof they are two names for one identical file on disk.
+
+--------------------------------------------------------------------
+2. Comparison between hard link and symbolic link
+--------------------------------------------------------------------
+Command:
+$ stat original.txt hardlink.txt symlink.txt
+
+Key output highlights:
+16777231 32918970 -rw-r--r-- 2 silbars staff 0 39 "Jul  3 22:51:19 2026" "Jul  3 22:51:14 2026" "Jul  3 22:51:18 2026" "Jul  3 22:50:22 2026" 4096 8 0 original.txt
+16777231 32918970 -rw-r--r-- 2 silbars staff 0 39 "Jul  3 22:51:19 2026" "Jul  3 22:51:14 2026" "Jul  3 22:51:18 2026" "Jul  3 22:50:22 2026" 4096 8 0 hardlink.txt
+16777231 32919685 lrwxr-xr-x 1 silbars staff 0 12 "Jul  3 22:56:49 2026" "Jul  3 22:56:49 2026" "Jul  3 22:56:49 2026" "Jul  3 22:56:49 2026" 4096 0 0 symlink.txt
+
+Explanation:
+| Aspect              | Hard Link                | Symbolic Link           |
+|---------------------|---------------------------|--------------------------|
+| Inode                | Same as original          | Different, own inode     |
+| Crosses filesystems  | No                         | Yes                      |
+| Links to directories | Not allowed (normally)    | Allowed                  |
+| Survives original    | Yes - data stays reachable| No - becomes a dangling  |
+|  deletion             |                           | reference (broken link)  |
+| File size shown       | Same as original's data   | Length of the target path|
+
+--------------------------------------------------------------------
+3. Effect of deleting the original file
+--------------------------------------------------------------------
+Command:
+$ rm original.txt
+$ cat hardlink.txt
+$ cat symlink.txt
+$ ls -li
+
+Output:
+hardlink.txt content -> "Original file content - do not lose me"
+symlink.txt error    -> cat: symlink.txt: No such file or directory
+
+Explanation:
+After `rm original.txt`, hardlink.txt still opens perfectly and
+shows the original text, because `rm` only removes a directory
+ENTRY and decrements the inode's link count - the actual data on
+disk is only freed once the link count reaches zero. Since
+hardlink.txt still references inode 32918970, the data survives.
+symlink.txt, however, breaks immediately: it only stored the path
+name "original.txt", and once that path no longer resolves to
+anything, the symlink becomes a "dangling link" and any attempt to
+read through it fails.
+
+--------------------------------------------------------------------
+4. Metadata collected using Linux utilities
+--------------------------------------------------------------------
+Post-deletion `ls -li` output:
+32918970 -rw-r--r--@ 1 silbars  staff    39  3 Jul 22:51 hardlink.txt
+32919685 lrwxr-xr-x@ 1 silbars  staff    12  3 Jul 22:56 symlink.txt -> original.txt
+
+Explanation:
+hardlink.txt's link count dropped from 2 to 1 (since one of its two
+directory entries, original.txt, was removed) but the inode itself
+persists because the count is still greater than zero. symlink.txt
+remains on disk as a valid directory entry (you can still `ls` it),
+but it is now a broken/dangling link pointing to a name that no
+longer exists.
+
+--------------------------------------------------------------------
+5. Conclusions drawn from the experiment
+--------------------------------------------------------------------
+- A hard link is a true alias for the same underlying data; deleting
+  any one name leaves the data intact as long as at least one link
+  remains (the file is only truly deleted when its link count hits
+  zero and no process has it open).
+- A symbolic link is a pointer by name/path, not by inode; it is
+  more flexible (can span filesystems, link to directories) but
+  fragile (breaks the instant the target is renamed or removed).
+- For the developer's original problem ("accidentally deleted a
+  file"), a hard link would have protected the data since the
+  hardlink.txt "backup name" kept it recoverable; a symlink would
+  NOT have helped, since it merely points to a name rather than
+  holding the data itself.
+
+====================================================================
+====================================================================

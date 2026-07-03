@@ -1,0 +1,115 @@
+====================================================================
+Question 2 - Secure Project Workspace Setup
+====================================================================
+
+--------------------------------------------------------------------
+1. Directory structure created
+--------------------------------------------------------------------
+Command:
+$ mkdir -p ProjectAlpha/{src,docs,config}
+$ ls -la ProjectAlpha
+
+Output:
+total 32
+drwxr-xr-x@ 5 silbars  staff   160  3 Jul 22:17 .
+drwxr-xr-x@ 9 silbars  staff   288  3 Jul 22:17 ..
+-rw-r--r--@ 1 silbars  staff  6148  3 Jul 22:17 .DS_Store
+-rw-r--r--@ 1 silbars  staff  4879  3 Jul 22:14 Project_Workspace_Report.txt
+drwxr-x---@ 6 silbars  staff   192  3 Jul 22:17 ProjectAlpha
+
+Explanation:
+`mkdir -p` with brace expansion `{src,docs,config}` creates the
+parent directory ProjectAlpha and all three subdirectories in a
+single command; -p also silently succeeds if a directory already
+exists, which is useful in idempotent setup scripts.
+
+--------------------------------------------------------------------
+2. File permissions before and after modification
+--------------------------------------------------------------------
+Command (create test files):
+$ touch ProjectAlpha/docs/readme.txt ProjectAlpha/config/settings.conf
+
+BEFORE (default permissions from umask):
+ProjectAlpha/config:
+-rw-r-----@ 1 silbars  staff    0  3 Jul 22:14 settings.conf
+ProjectAlpha/docs:
+-rw-r--r--@ 1 silbars  staff    0  3 Jul 22:14 readme.txt
+
+Command (tighten permissions):
+$ chmod 750 ProjectAlpha
+$ chmod 640 ProjectAlpha/config/settings.conf
+$ chmod 644 ProjectAlpha/docs/readme.txt
+
+AFTER:
+ProjectAlpha directory: drwxr-x---@ 6 silbars  staff   192  3 Jul 22:17 ProjectAlpha
+ProjectAlpha/config:
+-rw-r-----@ 1 silbars  staff    0  3 Jul 22:14 settings.conf
+ProjectAlpha/docs:
+-rw-r--r--@ 1 silbars  staff    0  3 Jul 22:14 readme.txt
+
+Explanation:
+New files were created with 644 (rw-r--r--) because the shell's
+umask of 0022 subtracts write permission for group and others from
+the default 666. I then deliberately tightened settings.conf
+(config files often hold secrets) to 640 (rw-r-----) so only the
+owner can write and only the owning group can read, while
+readme.txt was left more open at 644 since documentation is
+non-sensitive. The ProjectAlpha directory itself was set to 750
+(rwxr-x---) so outsiders cannot even list its contents.
+
+--------------------------------------------------------------------
+3. Ownership details
+--------------------------------------------------------------------
+Command:
+$ chown -R silbars:staff ProjectAlpha
+$ ls -l ProjectAlpha
+
+Output:
+total 0
+drwxr-xr-x@ 3 silbars  staff  96  3 Jul 22:14 config
+drwxr-xr-x@ 3 silbars  staff  96  3 Jul 22:14 docs
+drwxr-xr-x@ 2 silbars  staff  64  3 Jul 22:14 src
+
+Explanation:
+`chown -R user:group` recursively changes both the owning user and
+owning group of a directory tree. In a real team setup, you would
+set the owner to the project lead and the group to a shared team
+group (e.g. `chown -R devlead:projectteam ProjectAlpha`) so every
+team member in that group automatically inherits the correct access
+level without needing individual permission entries.
+
+--------------------------------------------------------------------
+4. Umask value used
+--------------------------------------------------------------------
+Command:
+$ umask
+
+Output:
+0022
+
+Explanation:
+umask 0022 means new files default to 666 - 022 = 644 (rw-r--r--)
+and new directories default to 777 - 022 = 755 (rwxr-xr-x). This is
+the mask subtracted from the maximum default permissions every time
+a process creates a new file or folder, which is why the freshly
+created readme.txt and settings.conf both appeared as 644 before I
+explicitly changed them.
+
+--------------------------------------------------------------------
+5. Explanation of how permissions protect project data
+--------------------------------------------------------------------
+Linux permissions implement the principle of least privilege at
+three levels - owner, group, and others - each independently
+controlling read (view/open), write (modify/delete), and execute
+(run/enter-directory) access. By setting the project root to 750,
+only the owner and members of the assigned group can even see what
+is inside; by tightening settings.conf to 640, sensitive
+configuration values are unreadable to anyone outside the team,
+which prevents accidental leakage of credentials or API keys.
+Ownership (chown) then ties those group permissions to the actual
+people who should have access, so adding/removing a user from the
+group instantly grants or revokes access to the entire workspace
+without touching individual file permissions again.
+
+====================================================================
+====================================================================
