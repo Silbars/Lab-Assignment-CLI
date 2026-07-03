@@ -1,4 +1,4 @@
-# Graded Lab Assignment (Modules 1–4) — Working Package
+# Graded Lab Assignment (Modules 1–5) — Working Package
 
 This folder contains a completed draft for all 5 questions: commands,
 real captured outputs, and required explanations for each report.
@@ -22,4 +22,3 @@ git branch -M main
 git remote add origin https://github.com/<your-username>/<repo-name>.git
 git push -u origin main
 ```
-# Lab-Assignment-CLI
